@@ -104,9 +104,11 @@ class Ghost {
                 dirs.push(d)
             }
         }
-        if (dirs.length === 0) {
+        if (dirs.length === 0 ||
+            (dirs.length === 1 && (dirs[0] === DIR.LEFT || dirs[0] === DIR.RIGHT)
+             && this.state !== 'eaten' && this.state !== 'inHouse')) {
             const opp = this.getOpposite(this.direction)
-            if (this.canMove(opp)) dirs.push(opp)
+            if (opp !== dirs[0] && this.canMove(opp)) dirs.push(opp)
         }
         return dirs
     }
@@ -123,7 +125,7 @@ class Ghost {
 
         if (this.state === 'eaten') {
             targetX = 14
-            targetY = 12
+            targetY = 14
         } else if (this.state === 'scatter') {
             targetX = this.scatterTarget.x
             targetY = this.scatterTarget.y
@@ -188,7 +190,10 @@ class Ghost {
                 case DIR.LEFT: nx--; break
                 case DIR.RIGHT: nx++; break
             }
-            const dist = (nx - targetX) ** 2 + (ny - targetY) ** 2
+            let dist = (nx - targetX) ** 2 + (ny - targetY) ** 2
+            if (this.tileY === 12 && this.state !== 'eaten' && this.state !== 'inHouse') {
+                if (d === DIR.LEFT || d === DIR.RIGHT) dist += 100000
+            }
             if (dist < bestDist) {
                 bestDist = dist
                 bestDir = d
@@ -235,17 +240,22 @@ class Ghost {
 
     update(player, ghosts) {
         if (this.state === 'inHouse') {
-            this.releaseTimer++
             if (this.releaseTimer >= this.releaseDelay) {
-                this.x = 14 * TILE_SIZE
-                this.y = 12 * TILE_SIZE
-                this.tileX = 14
-                this.tileY = 12
-                this.state = 'chase'
-                this.direction = DIR.LEFT
-                this.speed = GHOST_SPEED
-                this.releaseTimer = 0
+                if (this.isAligned()) {
+                    this.direction = DIR.UP
+                    if (!this.canMove(DIR.UP)) {
+                        this.state = 'chase'
+                        this.speed = GHOST_SPEED
+                    }
+                }
+                if (this.direction === DIR.UP && this.canMove(DIR.UP)) {
+                    this.y -= this.speed
+                }
+            } else {
+                this.releaseTimer++
             }
+            this.tileX = this.getTileX()
+            this.tileY = this.getTileY()
             return
         }
 
@@ -281,34 +291,9 @@ class Ghost {
         this.tileX = this.getTileX()
         this.tileY = this.getTileY()
 
-        if (ghosts && this.state !== 'inHouse' && this.state !== 'eaten') {
-            for (const other of ghosts) {
-                if (other === this || other.state === 'inHouse' || other.state === 'eaten') continue
-                if (other.tileX === this.tileX && other.tileY === this.tileY) {
-                    const pref = [this.direction, DIR.RIGHT, DIR.LEFT, DIR.UP, DIR.DOWN]
-                    for (const d of pref) {
-                        let nx = this.tileX, ny = this.tileY
-                        switch (d) {
-                            case DIR.UP: ny--; break
-                            case DIR.DOWN: ny++; break
-                            case DIR.LEFT: nx--; break
-                            case DIR.RIGHT: nx++; break
-                        }
-                        if (isWalkable(nx, ny, this) && !ghosts.some(g => g !== this && g.tileX === nx && g.tileY === ny)) {
-                            this.x = nx * TILE_SIZE
-                            this.y = ny * TILE_SIZE
-                            this.tileX = nx
-                            this.tileY = ny
-                            this.direction = d
-                            break
-                        }
-                    }
-                    break
-                }
-            }
-        }
-
-        if (this.state === 'eaten' && this.tileX === 14 && this.tileY === 12) {
+        if (this.state === 'eaten' && this.tileX === 14 && this.tileY === 14) {
+            this.x = 14 * TILE_SIZE
+            this.y = 14 * TILE_SIZE
             this.state = 'inHouse'
             this.speed = GHOST_SPEED
             this.releaseTimer = 0
@@ -406,19 +391,19 @@ const SCATTER_TARGETS = [
 ]
 
 function createGhosts() {
-    const blinky = new Ghost('blinky', COLORS.BLINKY, 14, 11, SCATTER_TARGETS[0], 'blinky')
-    blinky.state = 'chase'
+    const blinky = new Ghost('blinky', COLORS.BLINKY, 14, 14, SCATTER_TARGETS[0], 'blinky')
+    blinky.state = 'inHouse'
     blinky.releaseDelay = 0
 
     const pinky = new Ghost('pinky', COLORS.PINKY, 14, 14, SCATTER_TARGETS[1], 'pinky')
     pinky.state = 'inHouse'
     pinky.releaseDelay = 30
 
-    const inky = new Ghost('inky', COLORS.INKY, 12, 14, SCATTER_TARGETS[2], 'inky')
+    const inky = new Ghost('inky', COLORS.INKY, 14, 14, SCATTER_TARGETS[2], 'inky')
     inky.state = 'inHouse'
     inky.releaseDelay = 120
 
-    const clyde = new Ghost('clyde', COLORS.CLYDE, 16, 14, SCATTER_TARGETS[3], 'clyde')
+    const clyde = new Ghost('clyde', COLORS.CLYDE, 14, 14, SCATTER_TARGETS[3], 'clyde')
     clyde.state = 'inHouse'
     clyde.releaseDelay = 240
 
