@@ -14,9 +14,12 @@ let ghostModeIndex = 0
 let frameCount = 0
 let dyingAnimation = 0
 let readyTimer = 0
+let currentLevel = 0
+const startLevel = parseInt(new URLSearchParams(location.search).get('level')) || 0
 
 function initGame() {
-    initMaze()
+    currentLevel = startLevel 
+    initMaze(startLevel)
     player = new Player()
     ghosts = createGhosts()
     gameMode = MODE.READY
@@ -30,7 +33,8 @@ function initGame() {
 }
 
 function startNewGame() {
-    initMaze()
+    currentLevel = startLevel 
+    initMaze(startLevel)
     player = new Player()
     player.lives = 3
     ghosts = createGhosts()
@@ -53,6 +57,7 @@ function resetLevel() {
     ghostModeIndex = 0
     ghostModeTimer = 0
     dyingAnimation = 0
+    
 }
 
 function update() {
@@ -131,7 +136,20 @@ function update() {
             }
         }
         if (allPelletsEaten()) {
-            gameMode = MODE.WIN
+            currentLevel ++
+            if (currentLevel >= TOTAL_LEVELS){
+                gameMode = MODE.WIN
+            } else {
+                initMaze(currentLevel)
+                player.reset()
+                ghosts= createGhosts()
+                gameMode = MODE.READY
+                readyTimer = 90
+                ghostMode = 'scatter'
+                ghostModeIndex = 0
+                ghostModeTimer = 0
+                dyingAnimation = 0
+            }
         }
     }
 
@@ -176,6 +194,10 @@ function drawUI(ctx) {
     ctx.fillStyle = COLORS.BACKGROUND
     ctx.fillRect(0, CANVAS_HEIGHT, canvas.width, 40)
 
+    ctx.fillStyle = COLORS.SCORE
+    ctx.textAlign = 'left'
+    ctx.fillText('LEVEL: ' + (currentLevel + 1), 8, CANVAS_HEIGHT + 10) 
+    
     ctx.fillStyle = COLORS.SCORE
     ctx.font = '14px monospace'
     ctx.textAlign = 'left'

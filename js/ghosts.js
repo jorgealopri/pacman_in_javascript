@@ -40,6 +40,10 @@ class Ghost {
                 const cur = Math.floor(top / TILE_SIZE)
                 const next = Math.floor((top - this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next < 0) {
+                    if (!isOnTunnelCol(this.x)) return false
+                    return true
+                }
                 const c1 = Math.floor(this.x / TILE_SIZE)
                 const c2 = Math.floor((this.x + w) / TILE_SIZE)
                 for (let c = c1; c <= c2; c++) {
@@ -52,6 +56,10 @@ class Ghost {
                 const cur = Math.floor(bot / TILE_SIZE)
                 const next = Math.floor((bot + this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next >= ROWS) {
+                    if (!isOnTunnelCol(this.x)) return false
+                    return true
+                }
                 const c1 = Math.floor(this.x / TILE_SIZE)
                 const c2 = Math.floor((this.x + w) / TILE_SIZE)
                 for (let c = c1; c <= c2; c++) {
@@ -64,6 +72,10 @@ class Ghost {
                 const cur = Math.floor(left / TILE_SIZE)
                 const next = Math.floor((left - this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next < 0) {
+                    if (!isOnTunnelRow(this.y)) return false
+                    return true
+                }
                 const r1 = Math.floor(this.y / TILE_SIZE)
                 const r2 = Math.floor((this.y + w) / TILE_SIZE)
                 for (let r = r1; r <= r2; r++) {
@@ -76,6 +88,10 @@ class Ghost {
                 const cur = Math.floor(right / TILE_SIZE)
                 const next = Math.floor((right + this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next >= COLS) {
+                    if (!isOnTunnelRow(this.y)) return false
+                    return true
+                }
                 const r1 = Math.floor(this.y / TILE_SIZE)
                 const r2 = Math.floor((this.y + w) / TILE_SIZE)
                 for (let r = r1; r <= r2; r++) {
@@ -159,7 +175,7 @@ class Ghost {
                     const aheadX = player.tileX + dx
                     const aheadY = player.tileY + dy
                     targetX = aheadX + (aheadX - 14)
-                    targetY = aheadY + (aheadY - 14)
+                    targetY = aheadY + (aheadY - currentGhostSpawn.y)
                     break
                 }
                 case 'clyde': {
@@ -190,8 +206,15 @@ class Ghost {
                 case DIR.LEFT: nx--; break
                 case DIR.RIGHT: nx++; break
             }
-            let dist = (nx - targetX) ** 2 + (ny - targetY) ** 2
-            if (this.tileY === 12 && this.state !== 'eaten' && this.state !== 'inHouse') {
+            let dx = Math.abs(nx - targetX)
+            let dy = Math.abs(ny - targetY)
+
+            dx = Math.min(dx, COLS - dx)
+            dy = Math.min(dy, ROWS - dy)
+
+            let dist = dx * dx + dy * dy
+            
+            if (this.tileY === currentDoorRow && this.state !== 'eaten' && this.state !== 'inHouse') {
                 if (d === DIR.LEFT || d === DIR.RIGHT) dist += 100000
             }
             if (dist < bestDist) {
@@ -283,17 +306,21 @@ class Ghost {
             this.slideToAlign(this.direction)
         }
 
-        if (this.getTileY() === 14) {
+        if (isOnTunnelRow(this.y)) {
             if (this.x < 0) this.x = CANVAS_WIDTH - TILE_SIZE
             if (this.x >= CANVAS_WIDTH) this.x = 0
+        }
+        if (isOnTunnelCol(this.x)) {
+            if (this.y < 0) this.y = CANVAS_HEIGHT - TILE_SIZE
+            if (this.y >= CANVAS_HEIGHT) this.y = 0
         }
 
         this.tileX = this.getTileX()
         this.tileY = this.getTileY()
 
-        if (this.state === 'eaten' && this.tileX === 14 && this.tileY === 14) {
-            this.x = 14 * TILE_SIZE
-            this.y = 14 * TILE_SIZE
+        if (this.state === 'eaten' && this.tileX === currentGhostSpawn.x && this.tileY === currentGhostSpawn.y) {
+            this.x = currentGhostSpawn.x * TILE_SIZE
+            this.y = currentGhostSpawn.y * TILE_SIZE
             this.state = 'inHouse'
             this.speed = GHOST_SPEED
             this.releaseTimer = 0
@@ -391,19 +418,21 @@ const SCATTER_TARGETS = [
 ]
 
 function createGhosts() {
-    const blinky = new Ghost('blinky', COLORS.BLINKY, 14, 14, SCATTER_TARGETS[0], 'blinky')
+    const spawn = currentGhostSpawn
+    const scatters = LEVELS[currentLevel].scatterTargets
+    const blinky = new Ghost('blinky', COLORS.BLINKY, spawn.x, spawn.y, scatters[0], 'blinky')
     blinky.state = 'inHouse'
     blinky.releaseDelay = 0
 
-    const pinky = new Ghost('pinky', COLORS.PINKY, 14, 14, SCATTER_TARGETS[1], 'pinky')
+    const pinky = new Ghost('pinky', COLORS.PINKY, spawn.x, spawn.y, scatters[1], 'pinky')
     pinky.state = 'inHouse'
     pinky.releaseDelay = 30
 
-    const inky = new Ghost('inky', COLORS.INKY, 14, 14, SCATTER_TARGETS[2], 'inky')
+    const inky = new Ghost('inky', COLORS.INKY, spawn.x, spawn.y, scatters[2], 'inky')
     inky.state = 'inHouse'
     inky.releaseDelay = 120
 
-    const clyde = new Ghost('clyde', COLORS.CLYDE, 14, 14, SCATTER_TARGETS[3], 'clyde')
+    const clyde = new Ghost('clyde', COLORS.CLYDE, spawn.x, spawn.y, scatters[3], 'clyde')
     clyde.state = 'inHouse'
     clyde.releaseDelay = 240
 

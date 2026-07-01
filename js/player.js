@@ -43,6 +43,10 @@ class Player {
                 const cur = Math.floor(top / TILE_SIZE)
                 const next = Math.floor((top - this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next < 0) {
+                    if (!isOnTunnelCol(this.x)) return false
+                    return true
+                }
                 const c1 = Math.floor(this.x / TILE_SIZE)
                 const c2 = Math.floor((this.x + w) / TILE_SIZE)
                 for (let c = c1; c <= c2; c++) {
@@ -55,6 +59,10 @@ class Player {
                 const cur = Math.floor(bot / TILE_SIZE)
                 const next = Math.floor((bot + this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next >= ROWS) {
+                    if (!isOnTunnelCol(this.x)) return false
+                    return true
+                }
                 const c1 = Math.floor(this.x / TILE_SIZE)
                 const c2 = Math.floor((this.x + w) / TILE_SIZE)
                 for (let c = c1; c <= c2; c++) {
@@ -67,6 +75,10 @@ class Player {
                 const cur = Math.floor(left / TILE_SIZE)
                 const next = Math.floor((left - this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next < 0) {
+                    if (!isOnTunnelRow(this.y)) return false
+                    return true
+                }
                 const r1 = Math.floor(this.y / TILE_SIZE)
                 const r2 = Math.floor((this.y + w) / TILE_SIZE)
                 for (let r = r1; r <= r2; r++) {
@@ -79,6 +91,10 @@ class Player {
                 const cur = Math.floor(right / TILE_SIZE)
                 const next = Math.floor((right + this.speed) / TILE_SIZE)
                 if (next === cur) return true
+                if (next >= COLS) {
+                    if (!isOnTunnelRow(this.y)) return false
+                    return true
+                }
                 const r1 = Math.floor(this.y / TILE_SIZE)
                 const r2 = Math.floor((this.y + w) / TILE_SIZE)
                 for (let r = r1; r <= r2; r++) {
@@ -155,9 +171,13 @@ class Player {
             this.slideToAlign(this.direction)
         }
 
-        if (this.getTileY() === 14) {
+        if (isOnTunnelRow(this.y)) {
             if (this.x < 0) this.x = CANVAS_WIDTH - TILE_SIZE
             if (this.x >= CANVAS_WIDTH) this.x = 0
+        }
+        if (isOnTunnelCol(this.x)) {
+            if (this.y < 0) this.y = CANVAS_HEIGHT - TILE_SIZE
+            if (this.y >= CANVAS_HEIGHT) this.y = 0
         }
 
         this.tileX = this.getTileX()
